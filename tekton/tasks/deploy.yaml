@@ -1,0 +1,56 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: deploy
+spec:
+  params:
+    - name: IMAGE
+      description: 要部署的镜像地址
+    - name: NAMESPACE
+      default: default
+  workspaces:
+    - name: manifest-dir
+      description: 存放 k8s manifest 的目录（可选）
+      optional: true
+  steps:
+    - name: apply
+      image: bitnami/kubectl:latest
+      script: |
+        #!/bin/sh
+        set -e
+        export IMAGE=$(params.IMAGE)
+        export NAMESPACE=$(params.NAMESPACE)
+        cat <<EOF | kubectl apply -f -
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          name: tekton
+          namespace: $(params.NAMESPACE)
+        spec:
+          replicas: 1
+          selector:
+            matchLabels:
+              app: tekton
+          template:
+            metadata:
+              labels:
+                app: tekton
+            spec:
+              containers:
+                - name: app
+                  image: $(params.IMAGE)
+                  ports:
+                    - containerPort: 8080
+        ---
+        apiVersion: v1
+        kind: Service
+        metadata:
+          name: tekton
+          namespace: $(params.NAMESPACE)
+        spec:
+          selector:
+            app: tekton
+          ports:
+            - port: 80
+              targetPort: 8080
+        EOF

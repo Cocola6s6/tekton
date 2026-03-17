@@ -1,0 +1,26 @@
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  generateName: java-build-deploy-pipeline-
+spec:
+  pipelineRef:
+    name: java-build-deploy-pipeline
+  params:
+    - name: GIT_URL
+      value: "https://github.com/Cocola6s6/tekton.git"
+    - name: GIT_REVISION
+      value: master
+    - name: IMAGE
+      value: "docker.io/cocola6s6/tekton:latest"
+    - name: NAMESPACE
+      value: default
+  workspaces:
+    - name: shared-workspace
+      volumeClaimTemplate:
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 1Gi
+  timeout: 20m

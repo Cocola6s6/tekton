@@ -1,0 +1,53 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: java-build-deploy-pipeline
+spec:
+  params:
+    - name: GIT_URL
+      type: string
+    - name: GIT_REVISION
+      default: master
+    - name: IMAGE
+      type: string
+    - name: NAMESPACE
+      default: default
+  workspaces:
+    - name: shared-workspace
+    - name: docker-credentials
+      optional: true
+  tasks:
+    - name: fetch-source
+      taskRef:
+        name: git-clone
+      params:
+        - name: url
+          value: $(params.GIT_URL)
+        - name: revision
+          value: $(params.GIT_REVISION)
+      workspaces:
+        - name: output
+          workspace: shared-workspace
+
+    - name: build-push-image
+      taskRef:
+        name: build-push
+      runAfter:
+        - fetch-source
+      params:
+        - name: IMAGE
+          value: $(params.IMAGE)
+      workspaces:
+        - name: source
+          workspace: shared-workspace
+
+    - name: deploy-app
+      taskRef:
+        name: deploy
+      runAfter:
+        - build-push-image
+      params:
+        - name: IMAGE
+          value: $(params.IMAGE)
+        - name: NAMESPACE
+          value: $(params.NAMESPACE)

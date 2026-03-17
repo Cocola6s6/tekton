@@ -1,0 +1,34 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: build-push
+spec:
+  params:
+    - name: IMAGE
+      description: 完整镜像地址，如 docker.io/username/tekton
+    - name: DOCKERFILE
+      default: Dockerfile
+  workspaces:
+    - name: source
+      description: 源代码目录（含 Dockerfile）
+  steps:
+    - name: build-and-push
+      image: gcr.io/kaniko-project/executor:v1.19.0
+      env:
+        - name: DOCKER_CONFIG
+          value: /tekton/home/.docker
+      args:
+        - --dockerfile=$(params.DOCKERFILE)
+        - --context=$(workspaces.source.path)
+        - --destination=$(params.IMAGE)
+        - --skip-tls-verify
+      volumeMounts:
+        - name: docker-config
+          mountPath: /tekton/home/.docker
+  volumes:
+    - name: docker-config
+      secret:
+        secretName: dockerhub-secret
+        items:
+          - key: .dockerconfigjson
+            path: config.json

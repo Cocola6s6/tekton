@@ -1,0 +1,24 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: git-clone
+spec:
+  params:
+    - name: url
+      description: 仓库 URL
+    - name: revision
+      default: master
+    - name: deleteExisting
+      default: "true"
+  workspaces:
+    - name: output
+      description: 克隆后的代码目录
+  steps:
+    - name: clone
+      image: alpine/git:latest
+      script: |
+        #!/bin/sh
+        set -e
+        git clone $(params.url) --branch $(params.revision) --single-branch $(workspaces.output.path)
+        cd $(workspaces.output.path)
+        git rev-parse HEAD
